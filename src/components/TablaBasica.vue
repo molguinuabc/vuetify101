@@ -69,26 +69,6 @@
                       label="Userid"
                     ></v-text-field>
                   </v-col>
-                  <!-- <v-col
-                    cols="12"
-                    sm="6"
-                    md="4"
-                  >
-                    <v-text-field
-                      v-model="editedItem.carbs"
-                      label="Carbs (g)"
-                    ></v-text-field>
-                  </v-col>
-                  <v-col
-                    cols="12"
-                    sm="6"
-                    md="4"
-                  >
-                    <v-text-field
-                      v-model="editedItem.protein"
-                      label="Protein (g)"
-                    ></v-text-field>
-                  </v-col> -->
                 </v-row>
               </v-container>
             </v-card-text>
@@ -149,60 +129,21 @@
       </v-btn>
     </template>
   </v-data-table>
-  <!-- <template> -->
-    <!-- <v-data-table
-      v-model:items-per-page="itemsPerPage"
-      :headers="headers"
-      :items="post"
-      item-value="name"
-      class="elevation-1"
-    ></v-data-table> -->
-  <!-- </template> -->
-
-    <!-- <v-table
-      fixed-header
-      height="300px"
-    >
-      <thead>
-        <tr>
-          <th class="text-left">
-            Autor
-          </th>
-          <th class="text-left">
-            Título
-          </th>
-          <th class="text-left">
-            Post
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="item in posts"
-          :key="item.id"
-        >
-          <td>{{ item.nombre }}</td>
-          <td>{{ item.title }}</td>
-          <td>{{ item.body }}</td>
-        </tr>
-      </tbody>
-    </v-table> -->
 </template>
 
 
-<script>
-export default {
-  props:{
+<script setup>
+import {ref, computed, watch, nextTick} from 'vue'
+ const props = defineProps({
     id: Number,
     title: String,
     body:String,
     userid: Number
 
-  },
-  data: () => ({
-    dialog: false,
-    dialogDelete: false,
-    headers: [
+  });
+  const dialog = ref(false);
+  const dialogDelete = ref(false);
+  const headers = ref([
       {
         title: 'ID',
         align: 'start',
@@ -212,135 +153,104 @@ export default {
       { title: 'Title', key: 'title' },
       { title: 'Body', key: 'body' },
       { title: 'User Id', key: 'userid' },
-      // { title: 'Protein (g)', key: 'protein' },
       { title: 'Actions', key: 'actions', sortable: false },
-    ],
-    posts: [],
-    editedIndex: -1,
-    editedItem: {
-      name: '',
-      calories: 0,
-      fat: 0,
-      carbs: 0,
-      protein: 0,
-    },
-    defaultItem: {
-      name: '',
-      calories: 0,
-      fat: 0,
-      carbs: 0,
-      protein: 0,
-    },
-  }),
-
-  computed: {
-    formTitle () {
-      return this.editedIndex === -1 ? 'New Item' : 'Edit Item'
-    },
-  },
-
-  watch: {
-    dialog (val) {
-      val || this.close()
-    },
-    dialogDelete (val) {
-      val || this.closeDelete()
-    },
-  },
-
-  created () {
-    this.initialize()
-    //this.mounted()
-  },
-
-  methods: {
-    initialize () {
-
+    ]);
+  const posts = ref([]);
+  const editedIndex = ref(-1);
+  const editedItem = ref({});
+  const defaultItem = ref({});
+  const formTitle = computed(() => {
+      return editedIndex.value === -1 ? 'New Item' : 'Edit Item'
+  });
+  watch(dialog, (newDialog, oldDialog) => {
+    newDialog || close();
+  });
+  watch(dialogDelete, (newDialogDelete, oldDialogDelete) => {
+      newDialogDelete || closeDelete();
+  });
+  function initialize () {
       let p={};
       fetch('https://jsonplaceholder.typicode.com/posts')
           .then(response => response.json())
           .then(json => {
-                this.posts=json;
-                //this.posts.value = json;
-                for (let p=0; p<this.posts.length; p++) {
-                  fetch("https://jsonplaceholder.typicode.com/users/" + this.posts[p].userId)
+                posts.value=json;
+                for (let p=0; p<posts.value.length; p++) {
+                  fetch("https://jsonplaceholder.typicode.com/users/" + posts.value[p].userId)
                     .then(response => response.json())
                     .then(r => {
-                      this.posts[p].nombre=r.name;
+                      posts.value[p].nombre=r.name;
                     });
                 }
           });
-    },
+    }
+    initialize();
+    function editItem (item) {
+      editedIndex.value = posts.value.indexOf(item);
+      editedItem.value = Object.assign({}, item);
+      dialog.value = true;
+    }
 
-    editItem (item) {
-      this.editedIndex = this.posts.indexOf(item)
-      this.editedItem = Object.assign({}, item)
-      this.dialog = true
-    },
-
-    deleteItem (item) {
+    function deleteItem (item) {
       console.log("Borro"+this.posts);
-      this.editedIndex = this.posts.indexOf(item)
-      this.editedItem = Object.assign({}, item)
-      this.dialogDelete = true
+      editedIndex.value = this.posts.indexOf(item)
+      editedItem.value = Object.assign({}, item)
+      dialogDelete.value = true
       console.log(item.id);
       fetch('https://jsonplaceholder.typicode.com/posts/'+item.id, {
         method: 'DELETE',
       });
       // console.log("Borro"+this.posts.indexOf);
-    },
+    }
 
-    deleteItemConfirm (item) {
+    function deleteItemConfirm (item) {
 
-      this.posts.splice(this.editedIndex, 1)
+      posts.value.splice(editedIndex.value, 1);
 
-      this.closeDelete()
-    },
+      closeDelete();
+    }
 
-    close () {
-      this.dialog = false
-      this.$nextTick(() => {
-        this.editedItem = Object.assign({}, this.defaultItem)
-        this.editedIndex = -1
+    function close () {
+      dialog.value = false
+      nextTick(() => {
+        editedItem.value = Object.assign({}, defaultItem.value)
+        editedIndex.value = -1
       })
-    },
+    }
 
-    closeDelete () {
-      this.dialogDelete = false
-      this.$nextTick(() => {
-        this.editedItem = Object.assign({}, this.defaultItem)
-        this.editedIndex = -1
+    function closeDelete () {
+      dialogDelete.value = false
+      nextTick(() => {
+        editedItem.value = Object.assign({}, defaultItem.value)
+        editedIndex.value = -1
       })
-    },
+    }
 
-    save () {
-      if (this.editedIndex > -1) {
+    function save () {
+      const obj={
+          id: editedItem.value.id,
+          title: editedItem.value.title,
+          body:editedItem.value.body,
+          userid: editedItem.value.userid
+      }
+      if (editedIndex.value > -1) {
         console.log("Entra Put");
-        let obj={
-          id: this.editedItem.id,
-          title: this.editedItem.title,
-          body:this.editedItem.body,
-          userid: this.editedItem.userid
-        }
-        fetch('https://jsonplaceholder.typicode.com/posts/'+this.editedItem.id, {
+        console.log(obj);
+        fetch('https://jsonplaceholder.typicode.com/posts/'+editedItem.value.id, {
           method: 'PUT',
           body: JSON.stringify(obj),
           headers: {
             'Content-type': 'application/json; charset=UTF-8',
           },
         })
-          .then((response) => response.json())
-          .then((json) => console.log(json));
-        Object.assign(this.posts[this.editedIndex], this.editedItem)
+          .then((response) => {
+            r = response.json();
+            console.log("Response del put",r);
+            return r;
+          })
+          .then((json) => console.log("Response del PUT Json",json));
+        Object.assign(posts.value[editedIndex.value], editedItem.value)
       } else {
         console.log("Entra post");
-        let obj={
-          id: this.editedItem.id,
-          title: this.editedItem.title,
-          body:this.editedItem.body,
-          userid: this.editedItem.userid
-        }
-
         fetch('https://jsonplaceholder.typicode.com/posts', {
           method: 'POST',
           body: JSON.stringify(obj),
@@ -350,44 +260,11 @@ export default {
         })
           .then((response) => response.json())
           .then((json) => console.log(json));
-        this.posts.push(this.editedItem)
+        posts.value.push(editedItem.value)
       }
-      this.close()
-    },
-  },
-}
-
+      close()
+    }
 </script>
-
-<!--
-//
-// import { ref, onMounted} from 'vue';
-//import { data} from 'vuetify';
-
-// onMounted(()=>{
-//   let p={};
-//   fetch('https://jsonplaceholder.typicode.com/posts')
-//       .then(response => response.json())
-//       .then(json => {
-//             console.log(json);
-//             posts.value = json;
-//             for (let p=0; p<posts.value.length; p++) {
-//               fetch("https://jsonplaceholder.typicode.com/users/" + posts.value[p].userId)
-//                 .then(response => response.json())
-//                 .then(r => {
-//                   posts.value[p].nombre=r.name;
-//                 });
-//             }
-//       });
-//   });
-
-
-//const posts = ref([]);
-// const props = defineProps({
-//   title: String,
-//   body: String
-// });
-// const dialogo = data([dialog:false]) -->
 
 <style lang="">
 
