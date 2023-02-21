@@ -6,13 +6,12 @@
 
 // Components
 import App from './App.vue'
-import Vuetify from './plugins/vuetify'
+
 // Composables
 import { createApp } from 'vue'
 
 // Plugins
 import { registerPlugins } from '@/plugins'
-
 
 const app = createApp(App)
 
